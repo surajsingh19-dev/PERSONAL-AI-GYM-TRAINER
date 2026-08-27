@@ -1,0 +1,19 @@
+{
+  "name": "gym-ai-agent",
+  "version": "1.0.0",
+  "description": "AI agent that generates a personalized diet + workout plan from height, weight, age and gym proficiency, powered by the Google Gemini API. Includes weight/progress tracking.",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
+  }
+}
