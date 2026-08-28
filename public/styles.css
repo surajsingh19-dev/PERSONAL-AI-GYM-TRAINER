@@ -186,6 +186,7 @@ button, input, select {
   gap: 14px;
   color: var(--dim);
   padding-top: 60px;
+  display: none;
 }
 
 .empty-state h2 {
