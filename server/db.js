@@ -1,15 +1,22 @@
 const path = require("path");
 const fs = require("fs");
-const os = require("os");
+
+const isServerless = Boolean(
+  process.env.VERCEL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.VERCEL_ENV
+);
 
 let Database;
-try {
-  Database = require("better-sqlite3");
-} catch (err) {
-  console.warn("better-sqlite3 could not be loaded, using fallback storage:", err.message);
+if (!isServerless) {
+  try {
+    Database = require("better-sqlite3");
+  } catch (err) {
+    console.warn("better-sqlite3 could not be loaded, using in-memory store:", err.message);
+  }
 }
 
-// In-memory fallback store
+// In-memory store (used in serverless environments or as fallback)
 const memStore = {
   profiles: new Map(),
   plans: new Map(),
@@ -71,10 +78,9 @@ const memDb = {
 };
 
 let sqliteDb = null;
-if (Database) {
+if (!isServerless && Database) {
   try {
-    const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
-    const dataDir = isServerless ? os.tmpdir() : path.join(__dirname, "data");
+    const dataDir = path.join(__dirname, "data");
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
@@ -113,7 +119,7 @@ if (Database) {
     `);
     sqliteDb = db;
   } catch (err) {
-    console.warn("SQLite initialization failed, falling back to in-memory store:", err.message);
+    console.warn("SQLite initialization failed, using in-memory store:", err.message);
     sqliteDb = null;
   }
 }
@@ -129,7 +135,7 @@ function ensureProfileStub(profileId) {
       `).run(profileId, new Date().toISOString());
     }
   } catch {
-    // Ignore if not applicable
+    // Ignore
   }
 }
 
