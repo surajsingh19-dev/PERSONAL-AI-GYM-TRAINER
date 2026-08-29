@@ -1,4 +1,4 @@
-const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 const JSON_SHAPE = `{
@@ -48,44 +48,32 @@ Respond with ONLY a single valid JSON object (no markdown fences, no commentary 
 ${JSON_SHAPE}`;
 }
 
-// If the primary model is overloaded, fall back to the lighter Flash-Lite
-// model rather than making the person wait or fail outright.
-const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-flash-lite-latest";
+const DEFAULT_MODELS = [
+  MODEL,
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash",
+  "gemini-3.7-flash",
+].filter((v, i, a) => a.indexOf(v) === i);
 
-const MAX_RETRIES = 3;
-const RETRY_BASE_DELAY_MS = 800; // doubles each retry: ~0.8s, 1.6s, 3.2s
-const REQUEST_TIMEOUT_MS = 25000;
+const MAX_RETRIES = 1;
+const RETRY_DELAY_MS = 500;
+const REQUEST_TIMEOUT_MS = 12000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Retryable = transient server-side issues, not our fault (overload, timeout, rate limit).
 function isRetryable(status) {
   return status === 503 || status === 429 || status === 500;
 }
 
-function buildBody(promptText, includeThinkingConfig) {
-  const generationConfig = {
-    // Ask for JSON output without the stricter responseSchema validator —
-    // schema validation differs across model versions/aliases and can
-    // reject an otherwise-fine request with a bare, unhelpful
-    // "Request contains an invalid argument" 400. The exact JSON shape is
-    // spelled out in the prompt instead (see buildPrompt/JSON_SHAPE).
-    responseMimeType: "application/json",
-    temperature: 0.8,
-  };
-  if (includeThinkingConfig) {
-    // Skip the model's extended "thinking" pass. This plan doesn't need
-    // deep multi-step reasoning, and turning it off noticeably cuts
-    // response time on models that support it. Not every model accepts
-    // this field though (e.g. some Flash-Lite variants reject it with a
-    // 400), so callModel() retries once without it if that happens.
-    generationConfig.thinkingConfig = { thinkingBudget: 0 };
-  }
+function buildBody(promptText) {
   return {
     contents: [{ role: "user", parts: [{ text: promptText }] }],
-    generationConfig,
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.7,
+    },
   };
 }
 
@@ -127,35 +115,17 @@ async function doRequest(model, apiKey, body) {
   return res.json();
 }
 
-async function callModel(model, apiKey, promptText) {
-  try {
-    return await doRequest(model, apiKey, buildBody(promptText, true));
-  } catch (err) {
-    // If the model rejects the request with a 400, it's most likely the
-    // thinkingConfig field (some Flash-Lite variants don't support it, and
-    // the API doesn't always say so explicitly). Retry once without it
-    // before giving up on this model.
-    if (err.status === 400) {
-      return doRequest(model, apiKey, buildBody(promptText, false));
-    }
-    throw err;
-  }
-}
-
-// Tries a model with exponential-backoff retries on transient errors, then
-// falls through to the next model in the list.
 async function callWithRetriesAndFallback(models, apiKey, promptText) {
   let lastErr;
   for (const model of models) {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        return await callModel(model, apiKey, promptText);
+        return await doRequest(model, apiKey, buildBody(promptText));
       } catch (err) {
         lastErr = err;
         const retryable = isRetryable(err.status) || err.status === 504;
-        const isLastAttempt = attempt === MAX_RETRIES;
-        if (!retryable || isLastAttempt) break; // move to next model (or give up)
-        await sleep(RETRY_BASE_DELAY_MS * 2 ** attempt);
+        if (!retryable || attempt === MAX_RETRIES) break;
+        await sleep(RETRY_DELAY_MS);
       }
     }
   }
@@ -166,14 +136,13 @@ async function generatePlan(profile) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     const err = new Error(
-      "GEMINI_API_KEY is not set. Add it to your .env file (see .env.example)."
+      "GEMINI_API_KEY is not set. Add it to your .env file or Vercel Environment Variables."
     );
     err.code = "MISSING_API_KEY";
     throw err;
   }
 
-  const models = MODEL === FALLBACK_MODEL ? [MODEL] : [MODEL, FALLBACK_MODEL];
-  const data = await callWithRetriesAndFallback(models, apiKey, buildPrompt(profile));
+  const data = await callWithRetriesAndFallback(DEFAULT_MODELS, apiKey, buildPrompt(profile));
   const candidate = data.candidates && data.candidates[0];
   const finishReason = candidate && candidate.finishReason;
   const textPart =
@@ -195,7 +164,6 @@ async function generatePlan(profile) {
   }
 }
 
-// Strips ```json / ``` fences some models add even when told not to.
 function cleanJsonText(text) {
   return text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
 }
