@@ -44,9 +44,11 @@ router.post("/", async (req, res) => {
 
     res.json({ userId: profileId, plan: saved.plan, createdAt: new Date().toISOString() });
   } catch (err) {
-    console.error(err);
+    console.error("Error in POST /api/plan:", err);
     if (err.code === "MISSING_API_KEY") {
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({
+        error: "GEMINI_API_KEY is not configured in Vercel environment variables. Please set GEMINI_API_KEY in Vercel Project Settings.",
+      });
     }
     res.status(502).json({ error: err.message || "Failed to generate plan." });
   }
@@ -54,14 +56,19 @@ router.post("/", async (req, res) => {
 
 // GET /api/plan/latest -> most recent stored plan for this user, if any
 router.get("/latest", (req, res) => {
-  const profileId = req.header("x-user-id");
-  if (!profileId) return res.status(400).json({ error: "Missing x-user-id header." });
+  try {
+    const profileId = req.header("x-user-id");
+    if (!profileId) return res.status(400).json({ error: "Missing x-user-id header." });
 
-  const profile = getProfile(profileId);
-  const latest = getLatestPlan(profileId);
-  if (!latest) return res.json({ plan: null, profile: profile || null });
+    const profile = getProfile(profileId);
+    const latest = getLatestPlan(profileId);
+    if (!latest) return res.json({ plan: null, profile: profile || null });
 
-  res.json({ plan: latest.plan, createdAt: latest.created_at, profile });
+    res.json({ plan: latest.plan, createdAt: latest.created_at, profile });
+  } catch (err) {
+    console.error("Error in GET /api/plan/latest:", err);
+    res.status(500).json({ error: err.message || "Failed to load latest plan." });
+  }
 });
 
 module.exports = router;

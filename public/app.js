@@ -10,17 +10,36 @@ function getUserId() {
 }
 
 async function api(path, { method = "GET", body } = {}) {
-  const res = await fetch(path, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-id": getUserId(),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || data.errors?.join(", ") || "Request failed");
-  return data;
+  let res;
+  try {
+    res = await fetch(path, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": getUserId(),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (netErr) {
+    throw new Error(`Network error: Could not reach server (${netErr.message})`);
+  }
+
+  let data = null;
+  const rawText = await res.text();
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok) {
+    const errorMsg =
+      (data && (data.error || data.errors?.join(", "))) ||
+      (rawText && rawText.length < 200 ? rawText : `Request failed with status ${res.status}`);
+    throw new Error(errorMsg);
+  }
+
+  return data || {};
 }
 
 // ---------- Elements ----------
