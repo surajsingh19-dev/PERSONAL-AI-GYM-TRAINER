@@ -6,6 +6,7 @@ const JSON_SHAPE = `{
   "bmi": number,
   "bmi_category": string,
   "daily_calorie_target": integer,
+  "diet_type": string (e.g. "Vegetarian", "Non-Vegetarian", "Vegan", "Eggetarian"),
   "macros": { "protein_g": integer, "carbs_g": integer, "fat_g": integer },
   "diet_plan": [
     { "meal": string, "items": [string, ...], "approx_calories": integer, "approx_protein_g": integer }
@@ -24,8 +25,18 @@ const JSON_SHAPE = `{
   "safety_note": string
 }`;
 
+const DIET_GUIDELINES = {
+  vegetarian: "Vegetarian (Strictly NO chicken, meat, fish, seafood, or eggs. Must use high-quality vegetarian protein sources like paneer/cottage cheese, lentils/dal, chickpeas, beans, tofu, Greek yogurt, milk, nuts, seeds, and whey protein).",
+  non_vegetarian: "Non-Vegetarian (Can include lean poultry like chicken breast, fish/seafood, whole eggs/egg whites, as well as dairy, legumes, and whole grains).",
+  eggetarian: "Eggetarian (Vegetarian diet plus whole eggs / egg whites. Strictly NO chicken, meat, fish, or seafood).",
+  vegan: "Vegan (100% strictly plant-based. Absolutely NO meat, fish, eggs, dairy, milk, honey, or animal derivatives. Use tofu, tempeh, lentils, beans, edamame, plant protein powder, oats, seeds, and nuts).",
+};
+
 function buildPrompt(profile) {
-  const { height_cm, weight_kg, age, sex, level, goal } = profile;
+  const { height_cm, weight_kg, age, sex, level, goal, diet_type } = profile;
+  const dietPrefKey = String(diet_type || "non_vegetarian").toLowerCase();
+  const dietGuideline = DIET_GUIDELINES[dietPrefKey] || DIET_GUIDELINES.non_vegetarian;
+
   return `You are a certified strength coach and sports dietitian creating a personalized plan.
 
 Client profile:
@@ -35,13 +46,14 @@ Client profile:
 - Sex: ${sex || "not specified"}
 - Gym proficiency: ${level}
 - Primary goal: ${goal}
+- Dietary preference: ${dietGuideline}
 
 Instructions:
 - Compute their BMI from height and weight.
-- Build a realistic daily calorie target and macro split appropriate for their goal, age, and activity level implied by their proficiency.
-- Write a full day's diet plan (breakfast, lunch, dinner, and 1-2 snacks) using common, affordable, widely available foods. Give realistic per-meal calorie/protein estimates.
+- Build a realistic daily calorie target and macro split appropriate for their goal, age, sex, and activity level implied by their proficiency.
+- CRITICAL DIET REQUIREMENT: Write a full day's personalized diet plan (breakfast, lunch, dinner, and 1-2 snacks) strictly adhering to their dietary preference (${dietPrefKey}). If Vegetarian, NEVER include meat, poultry, fish, seafood, or eggs. If Vegan, NEVER include animal or dairy products. Ensure practical, wholesome protein-rich foods to comfortably hit their daily protein target. Give realistic per-meal calorie/protein estimates.
 - Write a weekly workout split sized to their proficiency: beginners get simpler full-body sessions with more rest and lower volume; advanced trainees get a more specialized split with higher volume/intensity. Include sets, reps, and rest for every exercise.
-- Keep tone encouraging and practical, not generic.
+- Keep tone encouraging, practical, and highly personalized.
 - Include a short safety_note reminding them this is general guidance and not a substitute for medical advice, especially if they have any injuries or conditions.
 
 Respond with ONLY a single valid JSON object (no markdown fences, no commentary before or after) matching exactly this shape:

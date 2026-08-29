@@ -98,6 +98,7 @@ if (!isServerless && Database) {
         sex TEXT,
         level TEXT,
         goal TEXT,
+        diet_type TEXT,
         updated_at TEXT NOT NULL
       );
 
@@ -117,6 +118,14 @@ if (!isServerless && Database) {
         created_at TEXT NOT NULL
       );
     `);
+
+    // Migration: add diet_type if table was created in an earlier version
+    try {
+      db.prepare("ALTER TABLE profiles ADD COLUMN diet_type TEXT").run();
+    } catch {
+      // Column already exists
+    }
+
     sqliteDb = db;
   } catch (err) {
     console.warn("SQLite initialization failed, using in-memory store:", err.message);
@@ -130,8 +139,8 @@ function ensureProfileStub(profileId) {
     const existing = sqliteDb.prepare("SELECT id FROM profiles WHERE id = ?").get(profileId);
     if (!existing) {
       sqliteDb.prepare(`
-        INSERT INTO profiles (id, height_cm, weight_kg, age, sex, level, goal, updated_at)
-        VALUES (?, 0, 0, 0, NULL, 'beginner', 'general_fitness', ?)
+        INSERT INTO profiles (id, height_cm, weight_kg, age, sex, level, goal, diet_type, updated_at)
+        VALUES (?, 0, 0, 0, NULL, 'beginner', 'general_fitness', 'non_vegetarian', ?)
       `).run(profileId, new Date().toISOString());
     }
   } catch {
@@ -142,8 +151,8 @@ function ensureProfileStub(profileId) {
 function upsertProfile(id, profile) {
   if (!sqliteDb) return memDb.upsertProfile(id, profile);
   const stmt = sqliteDb.prepare(`
-    INSERT INTO profiles (id, height_cm, weight_kg, age, sex, level, goal, updated_at)
-    VALUES (@id, @height_cm, @weight_kg, @age, @sex, @level, @goal, @updated_at)
+    INSERT INTO profiles (id, height_cm, weight_kg, age, sex, level, goal, diet_type, updated_at)
+    VALUES (@id, @height_cm, @weight_kg, @age, @sex, @level, @goal, @diet_type, @updated_at)
     ON CONFLICT(id) DO UPDATE SET
       height_cm = excluded.height_cm,
       weight_kg = excluded.weight_kg,
@@ -151,9 +160,10 @@ function upsertProfile(id, profile) {
       sex = excluded.sex,
       level = excluded.level,
       goal = excluded.goal,
+      diet_type = excluded.diet_type,
       updated_at = excluded.updated_at
   `);
-  stmt.run({ id, updated_at: new Date().toISOString(), ...profile });
+  stmt.run({ id, updated_at: new Date().toISOString(), diet_type: profile.diet_type || "non_vegetarian", ...profile });
   return getProfile(id);
 }
 

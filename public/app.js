@@ -104,8 +104,35 @@ function renderStats(plan) {
     .join("");
 }
 
+function getDietBadge(dietType) {
+  const norm = String(dietType || "").toLowerCase();
+  if (norm === "vegetarian" || (norm.includes("veg") && !norm.includes("non") && !norm.includes("vegan"))) {
+    return { label: "Vegetarian Diet", icon: "🌿", tagClass: "tag-veg" };
+  }
+  if (norm === "vegan" || norm.includes("vegan")) {
+    return { label: "Vegan (Plant-Based) Diet", icon: "🌱", tagClass: "tag-vegan" };
+  }
+  if (norm === "eggetarian" || norm.includes("egg")) {
+    return { label: "Eggetarian Diet (Veg + Eggs)", icon: "🥚", tagClass: "tag-eggetarian" };
+  }
+  return { label: "Non-Vegetarian Diet", icon: "🍗", tagClass: "tag-nonveg" };
+}
+
 function renderDiet(plan) {
-  panels.diet.innerHTML = (plan.diet_plan || [])
+  const activeDiet = plan.diet_type || (form.elements.diet_type ? form.elements.diet_type.value : "non_vegetarian");
+  const badge = getDietBadge(activeDiet);
+
+  const headerHtml = `
+    <div class="diet-header-bar">
+      <div class="diet-pill ${badge.tagClass}">
+        <span class="diet-icon">${badge.icon}</span>
+        <span class="diet-name">${escapeHtml(badge.label)}</span>
+      </div>
+      <span class="diet-caption">Targeted nutrition &amp; clean protein sources</span>
+    </div>
+  `;
+
+  const mealsHtml = (plan.diet_plan || [])
     .map(
       (m) => `
       <div class="meal-card">
@@ -119,6 +146,8 @@ function renderDiet(plan) {
       </div>`
     )
     .join("");
+
+  panels.diet.innerHTML = headerHtml + mealsHtml;
 }
 
 function renderWorkout(plan) {
@@ -284,7 +313,14 @@ function renderProgressChart(logs) {
 (async function init() {
   progressDateInput.valueAsDate = new Date();
   try {
-    const { plan } = await api("/api/plan/latest");
+    const { plan, profile } = await api("/api/plan/latest");
+    if (profile) {
+      ["height_cm", "weight_kg", "age", "sex", "level", "goal", "diet_type"].forEach((field) => {
+        if (form.elements[field] && profile[field] !== undefined && profile[field] !== null) {
+          form.elements[field].value = profile[field];
+        }
+      });
+    }
     if (plan) renderPlan(plan);
   } catch (err) {
     // no existing plan yet, ignore

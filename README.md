@@ -1,9 +1,6 @@
 # IRONPLAN — AI gym + diet planner
 
-A small full-stack app: enter your height, weight, age, and gym proficiency,
-and it generates a personalized diet + workout plan using the **Google
-Gemini API** (free tier). It also lets you log your weight over time and see
-a progress chart.
+A small full-stack app: enter your height, weight, age, gym proficiency, and dietary preference (Vegetarian, Non-Vegetarian, Eggetarian, Vegan), and it generates a personalized diet + workout plan using the **Google Gemini API** (free tier). It also lets you log your weight over time and see a progress chart.
 
 - **Backend:** Node.js + Express + SQLite (`better-sqlite3`)
 - **Frontend:** plain HTML/CSS/JS (no build step), Chart.js for the graph

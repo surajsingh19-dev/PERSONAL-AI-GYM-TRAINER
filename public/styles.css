@@ -283,7 +283,71 @@ button, input, select {
 .tab-panel { animation: fade-in 0.15s ease; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
-/* Diet cards */
+/* Diet cards & Header */
+
+.diet-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.diet-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.diet-pill .diet-icon {
+  font-size: 15px;
+}
+
+.diet-pill.tag-veg {
+  background: rgba(46, 160, 67, 0.16);
+  color: #56d364;
+  border: 1px solid rgba(86, 211, 100, 0.35);
+}
+
+.diet-pill.tag-vegan {
+  background: rgba(30, 185, 128, 0.16);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.35);
+}
+
+.diet-pill.tag-nonveg {
+  background: rgba(214, 97, 63, 0.16);
+  color: #f78166;
+  border: 1px solid rgba(247, 129, 102, 0.35);
+}
+
+.diet-pill.tag-eggetarian {
+  background: rgba(201, 162, 39, 0.16);
+  color: #e3b341;
+  border: 1px solid rgba(227, 179, 65, 0.35);
+}
+
+.diet-caption {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+@media (max-width: 540px) {
+  .diet-header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
 
 .meal-card {
   background: var(--panel);

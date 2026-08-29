@@ -63,6 +63,16 @@
         </select>
       </label>
 
+      <label class="field">
+        <span>Dietary preference</span>
+        <select name="diet_type" required>
+          <option value="vegetarian">Vegetarian (Veg — dairy &amp; plants, no meat/eggs)</option>
+          <option value="non_vegetarian" selected>Non-Vegetarian (Non-Veg — chicken, fish, eggs, meat)</option>
+          <option value="eggetarian">Eggetarian (Vegetarian + eggs)</option>
+          <option value="vegan">Vegan (100% plant-based)</option>
+        </select>
+      </label>
+
       <button type="submit" id="generate-btn" class="btn-primary">
         <span class="btn-label">Forge my plan</span>
       </button>

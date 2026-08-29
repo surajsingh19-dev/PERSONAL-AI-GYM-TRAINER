@@ -7,6 +7,7 @@ const router = express.Router();
 
 const LEVELS = ["beginner", "intermediate", "advanced"];
 const GOALS = ["lose_fat", "build_muscle", "general_fitness", "strength"];
+const DIET_TYPES = ["vegetarian", "non_vegetarian", "eggetarian", "vegan"];
 
 function validateProfile(body) {
   const errors = [];
@@ -16,6 +17,7 @@ function validateProfile(body) {
   const level = String(body.level || "").toLowerCase();
   const goal = String(body.goal || "").toLowerCase();
   const sex = body.sex ? String(body.sex) : null;
+  const diet_type = String(body.diet_type || "non_vegetarian").toLowerCase();
 
   if (!height_cm || height_cm < 100 || height_cm > 250)
     errors.push("height_cm must be between 100 and 250");
@@ -24,8 +26,10 @@ function validateProfile(body) {
   if (!age || age < 13 || age > 100) errors.push("age must be between 13 and 100");
   if (!LEVELS.includes(level)) errors.push(`level must be one of: ${LEVELS.join(", ")}`);
   if (!GOALS.includes(goal)) errors.push(`goal must be one of: ${GOALS.join(", ")}`);
+  if (!DIET_TYPES.includes(diet_type))
+    errors.push(`diet_type must be one of: ${DIET_TYPES.join(", ")}`);
 
-  return { errors, profile: { height_cm, weight_kg, age, sex, level, goal } };
+  return { errors, profile: { height_cm, weight_kg, age, sex, level, goal, diet_type } };
 }
 
 // POST /api/plan  -> creates/updates the profile, calls Gemini, stores + returns the plan
